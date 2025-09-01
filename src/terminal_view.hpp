@@ -78,8 +78,21 @@ class GridPrinter {
 
 class ConsoleUI : public GameUI {
    public:
-    void newGame() override {
+    ConsoleUI(onPlayerMoveFn onPlayerMove) {
+        this->onPlayerMove = onPlayerMove;
+    }
+
+    void onNewGame() override {
         std::cout << "==========Jogo de Batalha Naval==========\n";
+    }
+
+    void onGameClosed() override {
+        std::cout << "Fim de jogo!";
+    }
+
+    void onWaitingPlayerMove() override {
+        std::string move = getPlayerMoveInput();
+        onPlayerMove(move);
     }
 
     void showGrids(const GridView& player, const GridView& bot) override {
@@ -121,7 +134,8 @@ class ConsoleUI : public GameUI {
         std::cout << "Fim de jogo! Vencedor: " << winnerName << "\n";
     }
 
-    std::string getPlayerMoveInput() override {
+   private:
+    std::string getPlayerMoveInput() {
         std::string input;
         std::cout << "Digite um movimento: ";
         std::getline(std::cin, input);

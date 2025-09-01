@@ -3,7 +3,7 @@
 #include <cstddef>
 
 enum class Direction { Right, Down, Left, Up };
-inline Direction invertDirection(Direction& direction) {
+inline Direction invertDirection(const Direction& direction) {
     switch (direction) {
         case Direction::Up:
             return Direction::Down;

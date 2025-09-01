@@ -1,10 +1,12 @@
 #include <cctype>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "cell.hpp"
+#include "game_defs.hpp"
 #include "geometry.hpp"
 #include "grid.hpp"
 #include "move_representation.hpp"
@@ -341,54 +343,84 @@ class GameLogic {
 
 class GameLoop {
    public:
-    GameLoop(GameLogic& logic, GameUI& gameUI)
-        : gameLogic(logic), gameUI(gameUI) {}
+    GameLoop(GameLogic& logic) : gameLogic(logic) {}
+
+    void setup(GameUI& gameUI) { this->gameUI = &gameUI; }
+
+    void onPlayerMove(std::string moveInput) {
+        this->moveInput = moveInput;
+        managePlayerMoveWaiting(false);
+    }
 
     void run() {
-        gameUI.newGame();
-        while (!gameLogic.isGameOver()) {
-            processTurn();
-        }
-        gameUI.showGameOver(gameLogic.winner());
+        gameUI->onNewGame();
+        readyForNewPlayerTurn = true;
+        while (!gameLogic.isGameOver()) processTurn();
+        gameUI->showGameOver(gameLogic.winner());
     }
 
    private:
     void processTurn() {
-        if (gameLogic.currentTurn() == GameSide::Player)
+        if (gameLogic.currentTurn() == GameSide::Player) {
             handlePlayerTurn();
-        else
+        } else {
             handleBotTurn();
+        }
     }
 
     void handlePlayerTurn() {
-        gameUI.showGrids(gameLogic.playerView(), gameLogic.botView());
-        for (auto botMove : gameLogic.popAllBotMoves())
-            gameUI.showBotMove(botMove);
-        Position move = processPlayerMove();
-        gameUI.showPlayerMove(move);
+        if (readyForNewPlayerTurn) handleNewPlayerTurn();
+        if (waitingMove) return;
+        auto move = processPlayerMove();
+        if (processPlayerMoveResult(move)) readyForNewPlayerTurn = true;
     }
 
-    Position processPlayerMove() const {
-        while (true) {
-            std::string input = gameUI.getPlayerMoveInput();
-            auto [pos, error] = gameLogic.parsePlayerMove(input);
-            if (error != MoveParseError::None)
-                gameUI.showParseError(error);
-            else if (!gameLogic.playerMove(pos))
-                gameUI.showInvalidMoveMessage();
-            else
-                return pos;
+    void handleNewPlayerTurn() {
+        gameUI->showGrids(gameLogic.playerView(), gameLogic.botView());
+        for (auto botMove : gameLogic.popAllBotMoves())
+            gameUI->showBotMove(botMove);
+        managePlayerMoveWaiting(true);
+        readyForNewPlayerTurn = false;
+    }
+
+    bool processPlayerMoveResult(const std::optional<Position>& move) {
+        if (!move) {
+            managePlayerMoveWaiting(true);
+            return false;
         }
+        managePlayerMoveWaiting(false);
+        gameUI->showPlayerMove(*move);
+        return true;
+    }
+
+    void managePlayerMoveWaiting(bool waiting) {
+        this->waitingMove = waiting;
+        if (waiting) gameUI->onWaitingPlayerMove();
+    }
+
+    std::optional<Position> processPlayerMove() const {
+        auto [pos, error] = gameLogic.parsePlayerMove(moveInput);
+        if (error == MoveParseError::None && gameLogic.playerMove(pos)) {
+            return pos;
+        }
+        if (error != MoveParseError::None)
+            gameUI->showParseError(error);
+        else
+            gameUI->showInvalidMoveMessage();
+        return std::nullopt;
     }
 
     void handleBotTurn() {
         Position move = gameLogic.botMove();
-        gameUI.showBotMove(move);
+        gameUI->showBotMove(move);
     }
 
    private:
     GameLogic& gameLogic;
-    GameUI& gameUI;
+    GameUI* gameUI;
+    bool waitingMove;
+    bool readyForNewPlayerTurn{};
+    std::string moveInput{};
 };
 
 int main() {
@@ -396,7 +428,8 @@ int main() {
     GameLogic logic(std::move(game));
     GameSetup setup;
     logic.setup(setup);
-    ConsoleUI consoleUI;
-    GameLoop loop(logic, consoleUI);
-    loop.run();
+    GameLoop gameLoop(logic);
+    ConsoleUI gameUI([&](auto move) { gameLoop.onPlayerMove(move); });
+    gameLoop.setup(gameUI);
+    gameLoop.run();
 }
