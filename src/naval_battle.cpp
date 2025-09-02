@@ -349,23 +349,27 @@ class GameLoop {
 
     void onPlayerMove(std::string moveInput) {
         this->moveInput = moveInput;
-        managePlayerMoveWaiting(false);
+        waitingMove = false;
     }
 
     void run() {
         gameUI->onNewGame();
         readyForNewPlayerTurn = true;
         while (!gameLogic.isGameOver()) processTurn();
-        gameUI->showGameOver(gameLogic.winner());
+        gameUI->onGameOver(gameLogic.winner());
+        gameUI->onGameClosed();
     }
 
    private:
     void processTurn() {
-        if (gameLogic.currentTurn() == GameSide::Player) {
+        gameUI->processInput(waitingMove);
+        if (gameLogic.currentTurn() == GameSide::Player)
             handlePlayerTurn();
-        } else {
+        else
             handleBotTurn();
-        }
+        gameUI->render(
+            {&gameLogic.playerView(), &gameLogic.botView(), shouldRenderGrid});
+        shouldRenderGrid = false;
     }
 
     void handlePlayerTurn() {
@@ -376,26 +380,21 @@ class GameLoop {
     }
 
     void handleNewPlayerTurn() {
-        gameUI->showGrids(gameLogic.playerView(), gameLogic.botView());
+        shouldRenderGrid = true;
         for (auto botMove : gameLogic.popAllBotMoves())
-            gameUI->showBotMove(botMove);
-        managePlayerMoveWaiting(true);
+            gameUI->onBotMove(botMove);
+        waitingMove = true;
         readyForNewPlayerTurn = false;
     }
 
     bool processPlayerMoveResult(const std::optional<Position>& move) {
         if (!move) {
-            managePlayerMoveWaiting(true);
+            waitingMove = true;
             return false;
         }
-        managePlayerMoveWaiting(false);
-        gameUI->showPlayerMove(*move);
+        waitingMove = false;
+        gameUI->onPlayerMove(*move);
         return true;
-    }
-
-    void managePlayerMoveWaiting(bool waiting) {
-        this->waitingMove = waiting;
-        if (waiting) gameUI->onWaitingPlayerMove();
     }
 
     std::optional<Position> processPlayerMove() const {
@@ -404,22 +403,20 @@ class GameLoop {
             return pos;
         }
         if (error != MoveParseError::None)
-            gameUI->showParseError(error);
+            gameUI->onParseError(error);
         else
-            gameUI->showInvalidMoveMessage();
+            gameUI->onInvalidMoveMessage();
         return std::nullopt;
     }
 
-    void handleBotTurn() {
-        Position move = gameLogic.botMove();
-        gameUI->showBotMove(move);
-    }
+    void handleBotTurn() { gameLogic.botMove(); }
 
    private:
     GameLogic& gameLogic;
     GameUI* gameUI;
     bool waitingMove;
     bool readyForNewPlayerTurn{};
+    bool shouldRenderGrid{};
     std::string moveInput{};
 };
 

@@ -78,52 +78,55 @@ class GridPrinter {
 
 class ConsoleUI : public GameUI {
    public:
-    ConsoleUI(onPlayerMoveFn onPlayerMove) {
-        this->onPlayerMove = onPlayerMove;
+    ConsoleUI(onPlayerMoveFn onPlayerMoveCallback) {
+        this->onPlayerMoveCallback = onPlayerMoveCallback;
     }
 
     void onNewGame() override {
         std::cout << "==========Jogo de Batalha Naval==========\n";
     }
 
-    void onGameClosed() override {
-        std::cout << "Fim de jogo!";
-    }
+    void onGameClosed() override { std::cout << "Fim de jogo!"; }
 
-    void onWaitingPlayerMove() override {
+    void processInput(bool shouldReceivePlayerMove) override {
+        if (!shouldReceivePlayerMove) return;
         std::string move = getPlayerMoveInput();
-        onPlayerMove(move);
+        onPlayerMoveCallback(move);
     }
 
-    void showGrids(const GridView& player, const GridView& bot) override {
+    void render(const RenderData& renderData) override {
+        if (!renderData.changedGrids) return;
         std::cout << "==========GRID DO JOGADOR==========\n";
-        GridPrinter::printGrid(player);
+        GridPrinter::printGrid(*renderData.playerView);
         std::cout << "==========GRID DO BOT==========\n";
-        GridPrinter::printGrid(bot);
+        GridPrinter::printGrid(*renderData.botView);
+        for (auto& botMove : botMoves)
+            std::cout << "O bot jogou em " << botMove << "\n";
+        botMoves.clear();
     }
 
-    void showBotMove(const Position& pos) override {
+    void onBotMove(const Position& pos) override {
         std::string moveStr = MoveRepresentation::moveToStrCoordinate(pos);
-        std::cout << "O bot jogou em " << moveStr << "\n";
+        botMoves.push_back(moveStr);
     }
 
-    void showPlayerMove(const Position& pos) override {
+    void onPlayerMove(const Position& pos) override {
         std::string moveStr = MoveRepresentation::moveToStrCoordinate(pos);
         std::cout << "Você jogou em " << moveStr << "\n";
     }
 
-    void showInvalidMoveMessage() override {
+    void onInvalidMoveMessage() override {
         std::cout << "Jogada inválida. Tente novamente.\n";
     }
 
-    void showParseError(MoveParseError moveError) override {
+    void onParseError(MoveParseError moveError) override {
         if (moveError == MoveParseError::InvalidFormat)
             std::cout << "Formato inválido. Use letra + número (ex: A5).\n";
         else if (moveError == MoveParseError::OutOfBounds)
             std::cout << "Movimento fora dos limites do tabuleiro.\n";
     }
 
-    void showGameOver(GameSide winner) override {
+    void onGameOver(GameSide winner) override {
         std::string winnerName;
         if (winner == GameSide::Player)
             winnerName = "Jogador";
@@ -141,4 +144,7 @@ class ConsoleUI : public GameUI {
         std::getline(std::cin, input);
         return strutils::toUpper(strutils::trim(input));
     }
+
+   private:
+    std::vector<std::string> botMoves;
 };
