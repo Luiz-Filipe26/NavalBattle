@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include "game_defs.hpp"
 #include "grid.hpp"
 

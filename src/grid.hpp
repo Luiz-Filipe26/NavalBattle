@@ -11,7 +11,9 @@ class Grid {
 
     Dimension dimension() const { return {grid[0].size(), grid.size()}; }
     const GridCells& getCells() const { return grid; }
-    const bool hasCell(const Position& pos) { return !isPointOutOfGrid(pos); }
+    const bool hasCell(const Position& pos) const {
+        return !isPointOutOfGrid(pos);
+    }
     Cell& getCell(const Position& pos) { return grid[pos.y][pos.x]; }
     bool isType(const Position& pos, CellType type) const {
         return grid[pos.y][pos.x].type == type;

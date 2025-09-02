@@ -314,10 +314,10 @@ class GameLogic {
             else
                 ++totalBotShipHit;
         }
-        if (turn == GameSide::Bot && isShipSunk(grid, move))
-            botAI.onLastHitSunkShip();
-        bool hitShipNotSunking = grid.isType(move, CellType::AttackedShip) &&
-                                 !isShipSunk(grid, move);
+        bool isSunk = isShipSunk(grid, move);
+        if (turn == GameSide::Bot && isSunk) botAI.onLastHitSunkShip();
+        bool hitShipNotSunking =
+            grid.isType(move, CellType::AttackedShip) && !isSunk;
         if (!hitShipNotSunking) switchTurn();
     }
 
@@ -415,7 +415,7 @@ class GameLoop {
    private:
     GameLogic& gameLogic;
     GameUI* gameUI;
-    bool waitingMove;
+    bool waitingMove{};
     bool readyForNewPlayerTurn{};
     bool shouldRenderGrid{};
     std::string moveInput{};

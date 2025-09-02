@@ -22,7 +22,7 @@ class GraphicUI : public GameUI {
             throw std::runtime_error("Falha ao inicializar o ImGui-SFML.");
         }
 
-        auto fontPath = FS_RESOURCES_PATH / "arial-regular.ttf";
+        auto fontPath = resourcesPath / "arial-regular.ttf";
         if (!font.loadFromFile(fontPath.string())) {
             throw std::runtime_error("Nao foi possivel carregar a fonte: " +
                                      fontPath.string());
@@ -50,7 +50,7 @@ class GraphicUI : public GameUI {
     static constexpr unsigned int WINDOW_HEIGHT = 600;
     static constexpr float CELL_SIZE = 32.0f;
 
-    static inline const auto FS_RESOURCES_PATH =
+    static inline const auto resourcesPath =
         std::filesystem::path(RESOURCES_PATH);
 
     sf::RenderWindow window;
