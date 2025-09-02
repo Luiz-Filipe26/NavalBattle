@@ -8,6 +8,7 @@
 #include "cell.hpp"
 #include "game_defs.hpp"
 #include "geometry.hpp"
+#include "graphic_view.hpp"
 #include "grid.hpp"
 #include "move_representation.hpp"
 #include "ship.hpp"
@@ -355,7 +356,7 @@ class GameLoop {
     void run() {
         gameUI->onNewGame();
         readyForNewPlayerTurn = true;
-        while (!gameLogic.isGameOver()) processTurn();
+        while (gameUI->isOpen() && !gameLogic.isGameOver()) processTurn();
         gameUI->onGameOver(gameLogic.winner());
         gameUI->onGameClosed();
     }
@@ -420,13 +421,30 @@ class GameLoop {
     std::string moveInput{};
 };
 
-int main() {
+bool hasArgument(int argc, char* argv[], std::string_view argument) {
+    for (int i = 1; i < argc; ++i) {
+        if (std::string(argv[i]) != argument) continue;
+        return true;
+    }
+    return false;
+}
+
+int main(int argc, char* argv[]) {
     auto game = std::make_unique<Game>(GRID_WIDTH, GRID_HEIGHT, SHIPS_AMOUNT);
     GameLogic logic(std::move(game));
     GameSetup setup;
     logic.setup(setup);
     GameLoop gameLoop(logic);
-    ConsoleUI gameUI([&](auto move) { gameLoop.onPlayerMove(move); });
-    gameLoop.setup(gameUI);
+
+    std::unique_ptr<GameUI> gameUI;
+    if (hasArgument(argc, argv, "--console"))
+        gameUI = std::make_unique<ConsoleUI>(
+            [&](auto move) { gameLoop.onPlayerMove(move); });
+    else
+        gameUI = std::make_unique<GraphicUI>(
+            [&](auto move) { gameLoop.onPlayerMove(move); });
+
+    gameLoop.setup(*gameUI);
     gameLoop.run();
+    return 0;
 }

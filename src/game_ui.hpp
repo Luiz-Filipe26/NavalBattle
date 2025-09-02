@@ -16,6 +16,7 @@ class GameUI {
 
     virtual void onNewGame() = 0;
     virtual void onGameClosed() = 0;
+    virtual bool isOpen() const = 0;
     virtual void processInput(bool shouldReceivePlayerMove) = 0;
     virtual void render(const RenderData& renderData) = 0;
     virtual void onBotMove(const Position& pos) = 0;

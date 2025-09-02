@@ -1,0 +1,45 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "ninja-gcc-debug",
+      "displayName": "Ninja + G++ (Debug)",
+      "description": "Configures a debug build with Ninja and G++.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "ninja-gcc-release",
+      "displayName": "Ninja + G++ (Release)",
+      "description": "Configures a release build with Ninja and G++.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "build-debug",
+      "displayName": "Build Debug",
+      "configurePreset": "ninja-gcc-debug",
+      "description": "Builds the debug configuration."
+    },
+    {
+      "name": "build-release",
+      "displayName": "Build Release",
+      "configurePreset": "ninja-gcc-release",
+      "description": "Builds the release configuration."
+    }
+  ]
+}

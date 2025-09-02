@@ -86,7 +86,8 @@ class ConsoleUI : public GameUI {
         std::cout << "==========Jogo de Batalha Naval==========\n";
     }
 
-    void onGameClosed() override { std::cout << "Fim de jogo!"; }
+    void onGameClosed() override { std::cout << "Fim de jogo!\n"; }
+    bool isOpen() const override { return !closed; }
 
     void processInput(bool shouldReceivePlayerMove) override {
         if (!shouldReceivePlayerMove) return;
@@ -141,10 +142,17 @@ class ConsoleUI : public GameUI {
     std::string getPlayerMoveInput() {
         std::string input;
         std::cout << "Digite um movimento: ";
-        std::getline(std::cin, input);
+
+        if (!std::getline(std::cin, input)) {
+            closed = true;
+            std::cout << "\nSaindo do jogo...\n";
+            return "";
+        }
+
         return strutils::toUpper(strutils::trim(input));
     }
 
    private:
     std::vector<std::string> botMoves;
+    bool closed{false};
 };
