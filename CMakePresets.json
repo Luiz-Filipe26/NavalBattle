@@ -26,6 +26,30 @@
         "CMAKE_C_COMPILER": "gcc",
         "CMAKE_CXX_COMPILER": "g++"
       }
+    },
+    {
+      "name": "gcc-debug",
+      "displayName": "GCC (Debug)",
+      "description": "Configures a debug build with G++ using default generator.",
+      "binaryDir": "${sourceDir}/build/gcc-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "gcc-release",
+      "displayName": "GCC (Release)",
+      "description": "Configures a release build with G++ using default generator.",
+      "binaryDir": "${sourceDir}/build/gcc-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
     }
   ],
   "buildPresets": [
@@ -40,6 +64,18 @@
       "displayName": "Build Release",
       "configurePreset": "ninja-gcc-release",
       "description": "Builds the release configuration."
+    },
+    {
+      "name": "build-gcc-debug",
+      "displayName": "Build GCC Debug",
+      "configurePreset": "gcc-debug",
+      "description": "Builds the debug configuration using GCC default generator."
+    },
+    {
+      "name": "build-gcc-release",
+      "displayName": "Build GCC Release",
+      "configurePreset": "gcc-release",
+      "description": "Builds the release configuration using GCC default generator."
     }
   ]
 }

@@ -24,8 +24,8 @@ struct Game {
     Grid playerGrid;
     std::vector<Ship> botShips;
     std::vector<Ship> playerShips;
-    SimpleGridView playerGridView;
-    SimpleGridView botGridView;
+    GridView playerGridView;
+    GridView botGridView;
     int targetTotalShipSize;
     int shipsAmount;
 
@@ -33,15 +33,8 @@ struct Game {
         : botGrid(gridWidth, gridHeight),
           playerGrid(gridWidth, gridHeight),
           shipsAmount(shipsAmount),
-          playerGridView(playerGrid.getCells(),
-                         {{CellType::Ship, "█"},
-                          {CellType::Water, "~"},
-                          {CellType::AttackedShip, "X"},
-                          {CellType::AttackedWater, "^"}}),
-          botGridView(botGrid.getCells(), {{CellType::Ship, "~"},
-                                           {CellType::Water, "~"},
-                                           {CellType::AttackedShip, "X"},
-                                           {CellType::AttackedWater, "^"}}) {}
+          playerGridView(playerGrid),
+          botGridView(botGrid) {}
 };
 
 class GameSetup {
@@ -368,8 +361,7 @@ class GameLoop {
             handlePlayerTurn();
         else
             handleBotTurn();
-        gameUI->render(
-            {&gameLogic.playerView(), &gameLogic.botView(), shouldRenderGrid});
+        gameUI->render({shouldRenderGrid});
         shouldRenderGrid = false;
     }
 
@@ -439,10 +431,10 @@ int main(int argc, char* argv[]) {
     std::unique_ptr<GameUI> gameUI;
     if (hasArgument(argc, argv, "--console"))
         gameUI = std::make_unique<ConsoleUI>(
-            [&](auto move) { gameLoop.onPlayerMove(move); });
+            [&](auto move) { gameLoop.onPlayerMove(move); }, logic.botView(), logic.playerView());
     else
         gameUI = std::make_unique<GraphicUI>(
-            [&](auto move) { gameLoop.onPlayerMove(move); });
+            [&](auto move) { gameLoop.onPlayerMove(move); }, logic.botView(), logic.playerView());
 
     gameLoop.setup(*gameUI);
     gameLoop.run();

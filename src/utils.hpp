@@ -58,7 +58,7 @@ inline std::string trim(const std::string& s) {
 inline std::string toUpper(const std::string& input) {
     std::string result = input;
     std::transform(result.begin(), result.end(), result.begin(),
-                   [](u_char c) { return std::toupper(c); });
+                   [](unsigned char c) { return std::toupper(c); });
     return result;
 }
 

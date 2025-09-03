@@ -7,33 +7,31 @@
 #include "grid.hpp"
 #include "move_representation.hpp"
 
-class SimpleGridView : public GridView {
+class ConsoleGridView {
    public:
-    SimpleGridView(const GridCells& cells,
-                   const std::map<CellType, std::string>& cellMap)
-        : gridCells(&cells), cellTypeMap(cellMap) {}
+    ConsoleGridView(const GridView& gridView,
+                    const std::map<CellType, std::string>& cellMap)
+        : gridView(&gridView), cellTypeMap(cellMap) {}
 
-    Dimension dimension() const override {
-        return {(*gridCells)[0].size(), (*gridCells).size()};
-    }
-    std::string get(int x, int y) const override {
-        const CellType& type = (*gridCells)[y][x].type;
+    Dimension dimension() const { return gridView->dimension(); }
+    std::string get(int x, int y) const {
+        const CellType& type = gridView->get(x, y);
         return cellTypeMap.count(type) ? cellTypeMap.at(type) : "?";
     }
 
    private:
-    const GridCells* gridCells;
+    const GridView* gridView;
     std::map<CellType, std::string> cellTypeMap;
 };
 
 class GridPrinter {
    public:
-    static void printGrid(const GridView& gridView) {
+    static void printGrid(const ConsoleGridView& gridView) {
         std::cout << render(gridView);
     }
 
    private:
-    static std::string render(const GridView& gridView) {
+    static std::string render(const ConsoleGridView& gridView) {
         std::string result;
         const Dimension dimension = gridView.dimension();
         result.reserve(dimension.width * dimension.height * 5);
@@ -57,8 +55,8 @@ class GridPrinter {
         return result;
     }
 
-    static std::string makeMiddleCells(const GridView& gridView, int width,
-                                       int row) {
+    static std::string makeMiddleCells(const ConsoleGridView& gridView,
+                                       int width, int row) {
         std::string result;
         result.reserve(width * 2 + 3);
         result += strutils::padLeft(std::to_string(row + 1), 2, ' ') + " ";
@@ -78,7 +76,18 @@ class GridPrinter {
 
 class ConsoleUI : public GameUI {
    public:
-    ConsoleUI(onPlayerMoveFn onPlayerMoveCallback) {
+    ConsoleUI(onPlayerMoveFn onPlayerMoveCallback, const GridView& playerGridView,
+              const GridView& botGridView)
+        : playerConsoleGridView({playerGridView,
+                                 {{CellType::Ship, "█"},
+                                  {CellType::Water, "~"},
+                                  {CellType::AttackedShip, "X"},
+                                  {CellType::AttackedWater, "^"}}}),
+          botConsoleGridView({botGridView,
+                              {{CellType::Ship, "~"},
+                               {CellType::Water, "~"},
+                               {CellType::AttackedShip, "X"},
+                               {CellType::AttackedWater, "^"}}}) {
         this->onPlayerMoveCallback = onPlayerMoveCallback;
     }
 
@@ -98,9 +107,9 @@ class ConsoleUI : public GameUI {
     void render(const RenderData& renderData) override {
         if (!renderData.changedGrids) return;
         std::cout << "==========GRID DO JOGADOR==========\n";
-        GridPrinter::printGrid(*renderData.playerView);
+        GridPrinter::printGrid(this->playerConsoleGridView);
         std::cout << "==========GRID DO BOT==========\n";
-        GridPrinter::printGrid(*renderData.botView);
+        GridPrinter::printGrid(this->botConsoleGridView);
         for (auto& botMove : botMoves)
             std::cout << "O bot jogou em " << botMove << "\n";
         botMoves.clear();
@@ -155,4 +164,6 @@ class ConsoleUI : public GameUI {
    private:
     std::vector<std::string> botMoves;
     bool closed{false};
+    const ConsoleGridView botConsoleGridView;
+    const ConsoleGridView playerConsoleGridView;
 };

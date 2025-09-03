@@ -15,6 +15,9 @@ class Grid {
         return !isPointOutOfGrid(pos);
     }
     Cell& getCell(const Position& pos) { return grid[pos.y][pos.x]; }
+    const Cell& getConstCell(const Position& pos) const {
+        return grid[pos.y][pos.x];
+    }
     bool isType(const Position& pos, CellType type) const {
         return grid[pos.y][pos.x].type == type;
     }
@@ -86,7 +89,13 @@ class Grid {
 
 class GridView {
    public:
-    virtual Dimension dimension() const = 0;
-    virtual std::string get(int x, int y) const = 0;
-    virtual ~GridView() = default;
+    explicit GridView(const Grid& grid) : gameGrid(&grid) {}
+    Dimension dimension() const { return gameGrid->dimension(); }
+    CellType get(int x, int y) const {
+        const Cell& cell = gameGrid->getConstCell({x, y});
+        return cell.type;
+    }
+
+   private:
+    const Grid* gameGrid;
 };

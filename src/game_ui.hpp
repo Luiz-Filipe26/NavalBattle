@@ -1,12 +1,10 @@
 #pragma once
 
 #include <functional>
+#include <string>
 #include "game_defs.hpp"
-#include "grid.hpp"
 
 struct RenderData {
-    const GridView* const playerView;
-    const GridView* const botView;
     const bool changedGrids;
 };
 
