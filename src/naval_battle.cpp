@@ -339,7 +339,10 @@ class GameLoop {
    public:
     GameLoop(GameLogic& logic) : gameLogic(logic) {}
 
-    void setup(GameUI& gameUI) { this->gameUI = &gameUI; }
+    void setup(GameUI& gameUI) {
+        this->gameUI = &gameUI;
+        renderInterval = gameUI.getPreferredRenderInterval();
+    }
 
     void onPlayerMove(std::string moveInput) {
         this->moveInput = moveInput;
@@ -349,9 +352,17 @@ class GameLoop {
     void run() {
         gameUI->onNewGame();
         readyForNewPlayerTurn = true;
+        renderClock.restart();
+
         while (gameUI->isOpen() && !gameLogic.isGameOver()) processTurn();
+
         gameUI->onGameOver(gameLogic.winner());
         gameUI->onGameClosed();
+
+        while (gameUI->isOpen()) {
+            gameUI->processInput(false);
+            renderIfDue(false);
+        }
     }
 
    private:
@@ -361,8 +372,15 @@ class GameLoop {
             handlePlayerTurn();
         else
             handleBotTurn();
-        gameUI->render({shouldRenderGrid});
-        shouldRenderGrid = false;
+        renderIfDue(changedGrids);
+        changedGrids = false;
+    }
+
+    void renderIfDue(bool changedGrids) {
+        auto elapsed = renderClock.getElapsedTime();
+        if (elapsed < renderInterval) return;
+        gameUI->render({changedGrids, elapsed});
+        renderClock.restart();
     }
 
     void handlePlayerTurn() {
@@ -373,7 +391,7 @@ class GameLoop {
     }
 
     void handleNewPlayerTurn() {
-        shouldRenderGrid = true;
+        changedGrids = true;
         for (auto botMove : gameLogic.popAllBotMoves())
             gameUI->onBotMove(botMove);
         waitingMove = true;
@@ -406,11 +424,14 @@ class GameLoop {
 
    private:
     GameLogic& gameLogic;
-    GameUI* gameUI;
+    GameUI* gameUI{};
     bool waitingMove{};
     bool readyForNewPlayerTurn{};
-    bool shouldRenderGrid{};
+    bool changedGrids{};
     std::string moveInput{};
+
+    sf::Clock renderClock;
+    sf::Time renderInterval;
 };
 
 bool hasArgument(int argc, char* argv[], std::string_view argument) {
@@ -431,10 +452,12 @@ int main(int argc, char* argv[]) {
     std::unique_ptr<GameUI> gameUI;
     if (hasArgument(argc, argv, "--console"))
         gameUI = std::make_unique<ConsoleUI>(
-            [&](auto move) { gameLoop.onPlayerMove(move); }, logic.botView(), logic.playerView());
+            [&](auto move) { gameLoop.onPlayerMove(move); }, logic.botView(),
+            logic.playerView());
     else
         gameUI = std::make_unique<GraphicUI>(
-            [&](auto move) { gameLoop.onPlayerMove(move); }, logic.botView(), logic.playerView());
+            [&](auto move) { gameLoop.onPlayerMove(move); }, logic.botView(),
+            logic.playerView());
 
     gameLoop.setup(*gameUI);
     gameLoop.run();

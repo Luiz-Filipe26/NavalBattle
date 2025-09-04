@@ -76,8 +76,8 @@ class GridPrinter {
 
 class ConsoleUI : public GameUI {
    public:
-    ConsoleUI(onPlayerMoveFn onPlayerMoveCallback, const GridView& playerGridView,
-              const GridView& botGridView)
+    ConsoleUI(onPlayerMoveFn onPlayerMoveCallback,
+              const GridView& playerGridView, const GridView& botGridView)
         : playerConsoleGridView({playerGridView,
                                  {{CellType::Ship, "█"},
                                   {CellType::Water, "~"},
@@ -91,6 +91,8 @@ class ConsoleUI : public GameUI {
         this->onPlayerMoveCallback = onPlayerMoveCallback;
     }
 
+    sf::Time getPreferredRenderInterval() override { return sf::Time::Zero; }
+
     void onNewGame() override {
         std::cout << "==========Jogo de Batalha Naval==========\n";
     }
@@ -102,17 +104,6 @@ class ConsoleUI : public GameUI {
         if (!shouldReceivePlayerMove) return;
         std::string move = getPlayerMoveInput();
         onPlayerMoveCallback(move);
-    }
-
-    void render(const RenderData& renderData) override {
-        if (!renderData.changedGrids) return;
-        std::cout << "==========GRID DO JOGADOR==========\n";
-        GridPrinter::printGrid(this->playerConsoleGridView);
-        std::cout << "==========GRID DO BOT==========\n";
-        GridPrinter::printGrid(this->botConsoleGridView);
-        for (auto& botMove : botMoves)
-            std::cout << "O bot jogou em " << botMove << "\n";
-        botMoves.clear();
     }
 
     void onBotMove(const Position& pos) override {
@@ -145,6 +136,17 @@ class ConsoleUI : public GameUI {
         else
             winnerName = "Nenhum";
         std::cout << "Fim de jogo! Vencedor: " << winnerName << "\n";
+    }
+
+    void render(const RenderData& renderData) override {
+        if (!renderData.changedGrids) return;
+        std::cout << "==========GRID DO JOGADOR==========\n";
+        GridPrinter::printGrid(this->playerConsoleGridView);
+        std::cout << "==========GRID DO BOT==========\n";
+        GridPrinter::printGrid(this->botConsoleGridView);
+        for (auto& botMove : botMoves)
+            std::cout << "O bot jogou em " << botMove << "\n";
+        botMoves.clear();
     }
 
    private:

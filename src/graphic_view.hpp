@@ -38,6 +38,20 @@ class EventUtils {
     }
 };
 
+struct GameStatus {
+    std::string statusText{};
+    bool frozen{false};
+    bool isGameOver{false};
+    GameSide winner{GameSide::None};
+
+    void reset(const std::string& text = "Batalha Naval. Novo jogo iniciado") {
+        this->statusText = text;
+        this->frozen = false;
+        this->isGameOver = false;
+        this->winner = GameSide::None;
+    }
+};
+
 inline void drawText(sf::RenderWindow& window, const std::string& text,
                      const TextDetails& details) {
     sf::Text sfText(text, *details.font, details.style.size);
@@ -55,28 +69,24 @@ class GraphicUI : public GameUI {
           playerView(playerGridView),
           botView(botGridView) {
         this->onPlayerMoveCallback = onPlayerMoveCallback;
-        window.setFramerateLimit(GAME_FPS);
-
+        window.setVerticalSyncEnabled(true);
         auto fontPath = FS_RESOURCES_PATH / "arial-regular.ttf";
         if (!font.loadFromFile(fontPath.string()))
             throw std::runtime_error("Não foi possível carregar a fonte: " +
                                      fontPath.string());
-
-        deltaClock.restart();
     }
 
     ~GraphicUI() override = default;
 
-    void onNewGame() override {
-        statusText = "Novo jogo iniciado";
-        frozen = false;
-        isGameOver = false;
-        winner = GameSide::None;
+    sf::Time getPreferredRenderInterval() override {
+        return sf::seconds(1.0f / this->GAME_FPS);
     }
 
+    void onNewGame() override { gameStatus.reset(); }
+
     void onGameClosed() override {
-        frozen = true;
-        statusText = "Jogo encerrado. Tela congelada.";
+        gameStatus.frozen = true;
+        gameStatus.statusText = "Jogo encerrado. Tela congelada.";
     }
 
     bool isOpen() const override { return window.isOpen(); }
@@ -88,7 +98,7 @@ class GraphicUI : public GameUI {
                 window.close();
                 return;
             }
-            if (frozen) continue;
+            if (gameStatus.frozen) continue;
             auto botCellPosition = getBotCellPosition(event);
             if (shouldReceivePlayerMove && botCellPosition) {
                 std::string moveStr =
@@ -98,62 +108,64 @@ class GraphicUI : public GameUI {
         }
     }
 
+    void onBotMove(const Position& pos) override {
+        gameStatus.statusText =
+            "Bot atacou: " + MoveRepresentation::moveToStrCoordinate(pos);
+    }
+
+    void onPlayerMove(const Position& pos) override {
+        gameStatus.statusText =
+            "Você atacou: " + MoveRepresentation::moveToStrCoordinate(pos);
+    }
+
+    void onInvalidMoveMessage() override {
+        gameStatus.statusText = u8"Jogada inválida.";
+    }
+
+    void onParseError(MoveParseError moveError) override {
+        if (moveError == MoveParseError::InvalidFormat)
+            gameStatus.statusText =
+                "Formato inválido. Use letra+numero (ex: A5).";
+        else if (moveError == MoveParseError::OutOfBounds)
+            gameStatus.statusText = "Movimento fora dos limites do tabuleiro.";
+        else
+            gameStatus.statusText = "Erro ao interpretar movimento.";
+    }
+
+    void onGameOver(GameSide winnerSide) override {
+        gameStatus.isGameOver = true;
+        gameStatus.winner = winnerSide;
+        gameStatus.statusText =
+            "Fim de jogo! Vencedor: " + gameSideToString(gameStatus.winner);
+    }
+
     void render(const RenderData&) override {
-        deltaClock.restart();
         window.clear(BG_COLOR);
-    
+
         drawTitles();
-    
+
         TextDetails statusDetails{
             STATUS_STYLE,
             &font,
             {WINDOW_DIMENSION.width * 0.5f - STATUS_WIDTH * 0.5f, 8.0f}};
-        drawText(window, statusText, statusDetails);
-    
+        drawText(window, gameStatus.statusText, statusDetails);
+
         drawGrid(playerView, GRID_LEFT_X, GRID_TOP_Y, true);
         drawGrid(botView, GRID_RIGHT_X, GRID_TOP_Y, false);
-    
-        if (isGameOver) {
+
+        if (gameStatus.isGameOver) {
             TextDetails gameOverDetails{
                 GAME_OVER_STYLE,
                 &font,
                 {WINDOW_DIMENSION.width * 0.5f - STATUS_WIDTH * 0.5f, 40.0f}};
             drawText(window, "Fim de jogo!", gameOverDetails);
-    
+
             gameOverDetails.position.y = 64.0f;
-            drawText(window, "Vencedor: " + gameSideToString(winner),
+            drawText(window, "Vencedor: " + gameSideToString(gameStatus.winner),
                      gameOverDetails);
         }
-    
+
         window.display();
-    }
-    
-
-    void onBotMove(const Position& pos) override {
-        statusText =
-            "Bot atacou: " + MoveRepresentation::moveToStrCoordinate(pos);
-    }
-
-    void onPlayerMove(const Position& pos) override {
-        statusText =
-            "Você atacou: " + MoveRepresentation::moveToStrCoordinate(pos);
-    }
-
-    void onInvalidMoveMessage() override { statusText = u8"Jogada inválida."; }
-
-    void onParseError(MoveParseError moveError) override {
-        if (moveError == MoveParseError::InvalidFormat)
-            statusText = "Formato inválido. Use letra+numero (ex: A5).";
-        else if (moveError == MoveParseError::OutOfBounds)
-            statusText = "Movimento fora dos limites do tabuleiro.";
-        else
-            statusText = "Erro ao interpretar movimento.";
-    }
-
-    void onGameOver(GameSide winnerSide) override {
-        isGameOver = true;
-        winner = winnerSide;
-        statusText = "Fim de jogo! Vencedor: " + gameSideToString(winner);
     }
 
    private:
@@ -224,17 +236,15 @@ class GraphicUI : public GameUI {
         }
     }
 
-std::string cellTypeToSymbol(CellType type) {
-    static const std::map<CellType, std::string> typeToSymbol{
-        {CellType::Water, " "},          
-        {CellType::Ship, "█"},
-        {CellType::AttackedShip, "X"},
-        {CellType::AttackedWater, "^"}
-    };
+    std::string cellTypeToSymbol(CellType type) {
+        static const std::map<CellType, std::string> typeToSymbol{
+            {CellType::Water, " "},
+            {CellType::Ship, "█"},
+            {CellType::AttackedShip, "X"},
+            {CellType::AttackedWater, "^"}};
 
-    return typeToSymbol.count(type) ? typeToSymbol.at(type) : "?";
-}
-
+        return typeToSymbol.count(type) ? typeToSymbol.at(type) : "?";
+    }
 
     std::optional<Position> mapMouseToBotCell(const sf::Vector2i& mouse) const {
         const int gridW = 10;
@@ -268,12 +278,7 @@ std::string cellTypeToSymbol(CellType type) {
 
     sf::RenderWindow window;
     sf::Font font;
-    sf::Clock deltaClock;
-
-    std::string statusText{"Bem-vindo à Batalha Naval"};
-    bool frozen{false};
-    bool isGameOver{false};
-    GameSide winner{GameSide::None};
+    GameStatus gameStatus;
 
     static constexpr unsigned int GAME_FPS = 60;
     static constexpr Dimension WINDOW_DIMENSION = {900, 600};
