@@ -1,64 +1,64 @@
 cmake_minimum_required(VERSION 3.16)
-
-set(CMAKE_CXX_STANDARD 17)
-
-#! ! ! ! ! ! !
-#set this to true to ship the game!
-#basically this will change the RESOURCES_PATH to be the local path
-#! ! ! ! ! ! !
-#DELETE THE OUT FOLDER AFTER CHANGING THIS BECAUSE VISUAL STUDIO DOESN'T SEEM TO RECOGNIZE THIS CHANGE AND REBUILD!
-option(PRODUCTION_BUILD "Make this a production build!" OFF)
-#DELETE THE OUT FOLDER AFTER CHANGING THIS BECAUSE VISUAL STUDIO DOESN'T SEEM TO RECOGNIZE THIS CHANGE AND REBUILD!
-
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE) # link time optimization
-
-# Ensure SFML is built as static libraries
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build SFML as static libraries" FORCE)
-
-if(MSVC) 
-    add_compile_options(/arch:AVX2) # make sure SIMD optimizations take place
-endif()
-
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 project(NavalBattle)
 
-# Add SFML
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE) # link time optimization
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# --- Opção de build de produção ---
+option(PRODUCTION_BUILD "Make this a production build!" OFF)
+
+if(MSVC) 
+    add_compile_options(/arch:AVX2) # SIMD
+    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+endif()
+
+# --- Fetch FreeType ---
+include(FetchContent)
+
+FetchContent_Declare(
+    freetype
+    GIT_REPOSITORY https://github.com/freetype/freetype.git
+    GIT_TAG VER-2-12-1
+)
+FetchContent_MakeAvailable(freetype)
+
+# --- Configure SFML para usar FreeType baixado ---
+set(SFML_USE_SYSTEM_FREETYPE ON CACHE BOOL "Use system FreeType" FORCE)
+set(FREETYPE_INCLUDE_DIRS "${freetype_SOURCE_DIR}/include")
+set(FREETYPE_LIBRARIES freetype) # sempre "freetype" no Windows
+
+# --- Disable SFML modules que não usamos ---
+set(SFML_BUILD_AUDIO OFF CACHE INTERNAL "")
+set(SFML_BUILD_NETWORK OFF CACHE INTERNAL "")
+set(SFML_BUILD_TESTING OFF CACHE INTERNAL "")
+set(SFML_BUILD_EXAMPLES OFF CACHE INTERNAL "")
+
+# --- Adiciona SFML (depois do FreeType) ---
 add_subdirectory(thirdparty/SFML-2.6.1)
 
-# MY_SOURCES is defined to be a list of all the source files for my game 
-# DON'T ADD THE SOURCES BY HAND, they are already added with this macro
+# --- Fontes do projeto ---
 file(GLOB_RECURSE MY_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
 add_executable("${CMAKE_PROJECT_NAME}")
 set_property(TARGET "${CMAKE_PROJECT_NAME}" PROPERTY CXX_STANDARD 17)
-
-if(PRODUCTION_BUILD)
-    # setup the ASSETS_PATH macro to be in the root folder of your exe
-    target_compile_definitions("${CMAKE_PROJECT_NAME}" PUBLIC RESOURCES_PATH="./resources/") 
-    target_compile_definitions("${CMAKE_PROJECT_NAME}" PUBLIC PRODUCTION_BUILD=1) 
-else()
-    # This is useful to get an ASSETS_PATH in your IDE during development
-    target_compile_definitions("${CMAKE_PROJECT_NAME}" PUBLIC RESOURCES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/resources/")
-    target_compile_definitions("${CMAKE_PROJECT_NAME}" PUBLIC PRODUCTION_BUILD=0) 
-endif()
-
 target_sources("${CMAKE_PROJECT_NAME}" PRIVATE ${MY_SOURCES})
-
-if(MSVC) # If using the VS compiler...
-    target_compile_definitions("${CMAKE_PROJECT_NAME}" PUBLIC _CRT_SECURE_NO_WARNINGS)
-    # YOU CAN REMOVE THE CONSOLE WITH THIS LINE! YOU CAN EVEN DO AN IF PRODUCTION_BUILD TO REMOVE IT ONLY IN PRODUCTION BUILDS
-    # set_target_properties("${CMAKE_PROJECT_NAME}" PROPERTIES LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup") # no console
-endif()
-
 target_include_directories("${CMAKE_PROJECT_NAME}" PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/")
 
-# Link SFML libraries statically
+# --- Definições de recursos ---
+if(PRODUCTION_BUILD)
+    target_compile_definitions("${CMAKE_PROJECT_NAME}" PUBLIC RESOURCES_PATH="./resources/" PRODUCTION_BUILD=1)
+else()
+    target_compile_definitions("${CMAKE_PROJECT_NAME}" PUBLIC RESOURCES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/resources/" PRODUCTION_BUILD=0)
+endif()
+
+# --- Link SFML + FreeType explicitamente ---
 target_link_libraries("${CMAKE_PROJECT_NAME}" 
-    sfml-graphics 
-    sfml-window 
-    sfml-system 
-#    sfml-audio 
+    sfml-graphics
+    sfml-window
+    sfml-system
+    freetype
+#    sfml-audio
 #    sfml-network
 )

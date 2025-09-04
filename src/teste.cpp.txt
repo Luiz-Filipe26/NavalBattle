@@ -1,0 +1,38 @@
+#include <SFML/Graphics.hpp>
+#include <stdexcept>
+#include <filesystem>
+
+int main() {
+    sf::RenderWindow window(sf::VideoMode(800, 600), "Teste de Texto");
+    window.setFramerateLimit(60);
+
+    // Caminho relativo à pasta resources do seu projeto
+    std::filesystem::path fontPath = std::filesystem::path(RESOURCES_PATH) / "arial-regular.ttf";
+
+    sf::Font font;
+    if (!font.loadFromFile(fontPath.string())) {
+        throw std::runtime_error("Nao   oi possivel carregar a fonte: " + fontPath.string());
+    }
+
+    sf::Text text;
+    text.setFont(font);
+    text.setString("O texto deve aparecer aqui!");
+    text.setCharacterSize(32);
+    text.setFillColor(sf::Color::White);
+    text.setPosition(100, 250);
+
+    while (window.isOpen()) {
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
+                window.close();
+            }
+        }
+
+        window.clear(sf::Color(30, 30, 30));
+        window.draw(text);
+        window.display();
+    }
+
+    return 0;
+}

@@ -101,33 +101,33 @@ class GraphicUI : public GameUI {
     void render(const RenderData&) override {
         deltaClock.restart();
         window.clear(BG_COLOR);
-
+    
         drawTitles();
-        drawGrid(playerView, GRID_LEFT_X, GRID_TOP_Y, true);
-        drawGrid(botView, GRID_RIGHT_X, GRID_TOP_Y, false);
-
-        // Status (centralizado no topo)
+    
         TextDetails statusDetails{
             STATUS_STYLE,
             &font,
             {WINDOW_DIMENSION.width * 0.5f - STATUS_WIDTH * 0.5f, 8.0f}};
         drawText(window, statusText, statusDetails);
-
-        // Game over
+    
+        drawGrid(playerView, GRID_LEFT_X, GRID_TOP_Y, true);
+        drawGrid(botView, GRID_RIGHT_X, GRID_TOP_Y, false);
+    
         if (isGameOver) {
             TextDetails gameOverDetails{
                 GAME_OVER_STYLE,
                 &font,
                 {WINDOW_DIMENSION.width * 0.5f - STATUS_WIDTH * 0.5f, 40.0f}};
             drawText(window, "Fim de jogo!", gameOverDetails);
-
+    
             gameOverDetails.position.y = 64.0f;
             drawText(window, "Vencedor: " + gameSideToString(winner),
                      gameOverDetails);
         }
-
+    
         window.display();
     }
+    
 
     void onBotMove(const Position& pos) override {
         statusText =
